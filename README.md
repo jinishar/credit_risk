@@ -121,7 +121,7 @@ Current configurable risk bands:
 
 - **Low:** probability < 0.20
 - **Medium:** 0.20 – 0.50
-- **High:** > 0.50
+- **High:** ≥ 0.50
 
 These bands are intended for decision support and can be adjusted according to business risk appetite.
 
@@ -253,10 +253,10 @@ The Streamlit application contains five main sections:
 | Section | Purpose |
 |---|---|
 | 📊 **EDA** | Dataset exploration and business insights |
-| 🎯 **Risk Prediction** | Applicant default probability and risk band |
-| 🔍 **Explainability** | SHAP-based model explanations |
-| 📋 **Business Rules** | Interpretable model-derived risk rules |
-| 💬 **Chatbot** | Natural-language querying using NL → SQL |
+| 🎯 **Risk Scoring** | Applicant default probability and risk band |
+| 🔬 **Explainability** | SHAP-based model explanations |
+| ⚖️ **Business Rules** | Interpretable model-derived risk rules |
+| 💬 **Ask the Data** | Natural-language querying using NL → SQL |
 
 ---
 
@@ -266,15 +266,22 @@ The Streamlit application contains five main sections:
 credit_risk_platform/
 │
 ├── app/
-│   └── streamlit_app.py
+│   ├── streamlit_app.py
+│   ├── data.py
+│   ├── theme.py
+│   ├── styles.py
+│   ├── ui.py
+│   ├── charts.py
+│   └── sections/
 │
 ├── data/
 │   └── Home Credit dataset
 │
 ├── documents/
-│   └── project_presentation.pdf
+│   └── project presentation
 │
 ├── notebooks/
+│   ├── eda.py
 │   ├── eda.ipynb
 │   └── figures/
 │
@@ -299,6 +306,10 @@ credit_risk_platform/
 │   │   └── query_runner.py
 │   │
 │   └── utils/
+│       ├── config.py
+│       ├── logger.py
+│       ├── helpers.py
+│       └── docker_utils.py
 │
 ├── sql/
 │   ├── schema.sql
@@ -306,10 +317,13 @@ credit_risk_platform/
 │
 ├── models/
 │
+├── tests/
+│
 ├── Dockerfile
 ├── docker-compose.yml
 ├── entrypoint.sh
 ├── requirements.txt
+├── requirements-dev.txt
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -443,6 +457,17 @@ Open:
 ```text
 http://localhost:8501
 ```
+
+---
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Covers the UI helpers, section imports, and the calibrated risk score.
 
 ---
 

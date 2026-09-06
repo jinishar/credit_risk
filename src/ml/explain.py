@@ -71,7 +71,7 @@ class RiskExplainer:
 
         return {
             "base_value": float(base_value),
-            "predicted_probability": float(self.risk_model.model.predict_proba(X)[:, 1][0]),
+            "predicted_probability": float(self.risk_model.predict_proba(applicant_row).iloc[0]),
             "top_features": contributions.to_dict(orient="records"),
         }
 

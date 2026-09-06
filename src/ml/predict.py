@@ -3,10 +3,29 @@ from __future__ import annotations
 
 import joblib
 import pandas as pd
+from sklearn.calibration import CalibratedClassifierCV
 
 from src.data.preprocessor import Preprocessor
 from src.utils.config import MODEL_PATH, PREPROCESSOR_PATH, RISK_HIGH_THRESHOLD, RISK_LOW_THRESHOLD
 from src.utils.helpers import risk_band
+
+
+def _unwrap_calibration(model):
+    """Split `train.py`'s `CalibratedClassifierCV(isotonic, cv='prefit')` into its
+    base estimator and the fitted isotonic calibrator, so `predict_proba` can
+    apply the calibrator explicitly to the base model's positive-class
+    probability.
+
+    Why not just call `CalibratedClassifierCV.predict_proba`: the isotonic step
+    is fitted on `predict_proba` output ([0, 1]), but since scikit-learn 1.7 the
+    wrapper feeds it the base estimator's `decision_function` margins instead
+    (LGBMClassifier now exposes one), and isotonic's out-of-bounds clip then
+    collapses every negative-margin applicant — ~99% of them — to exactly 0.0.
+    """
+    if isinstance(model, CalibratedClassifierCV):
+        calibrated = model.calibrated_classifiers_[0]
+        return calibrated.estimator, calibrated.calibrators[0]
+    return model, None
 
 
 class RiskModel:
@@ -19,10 +38,13 @@ class RiskModel:
             )
         self.model = joblib.load(MODEL_PATH)
         self.preprocessor: Preprocessor = Preprocessor.load(PREPROCESSOR_PATH)
+        self._base, self._calibrator = _unwrap_calibration(self.model)
 
     def predict_proba(self, df: pd.DataFrame) -> pd.Series:
         X = self.preprocessor.transform(df)
-        proba = self.model.predict_proba(X)[:, 1]
+        proba = self._base.predict_proba(X)[:, 1]
+        if self._calibrator is not None:
+            proba = self._calibrator.predict(proba)
         return pd.Series(proba, index=df.index, name="default_probability")
 
     def score(self, df: pd.DataFrame) -> pd.DataFrame:
