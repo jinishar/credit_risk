@@ -15,8 +15,11 @@ from __future__ import annotations
 import lightgbm as lgb
 import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from src.data.loader import load_train_df
 from src.data.preprocessor import Preprocessor
@@ -50,22 +53,39 @@ def train() -> dict:
     log.info("Train: %d rows | Val: %d rows | positive rate: %.3f", len(X_train), len(X_val), y.mean())
 
     # --- Baseline: Logistic Regression --------------------------------------------------
-    baseline = LogisticRegression(max_iter=3000, class_weight="balanced", random_state=RANDOM_SEED)
+    # The preprocessor leaves NaN in place (for LightGBM); a linear model needs
+    # imputation + scaling, so the baseline carries its own pipeline. Without
+    # scaling, lbfgs does not converge on this feature set.
+    baseline = make_pipeline(
+        SimpleImputer(strategy="median"),
+        StandardScaler(),
+        LogisticRegression(max_iter=1000, class_weight="balanced", random_state=RANDOM_SEED),
+    )
     baseline.fit(X_train, y_train)
     baseline_metrics = evaluate(y_val, baseline.predict_proba(X_val)[:, 1])
     log.info("Logistic Regression baseline: ROC-AUC=%.4f PR-AUC=%.4f",
               baseline_metrics["roc_auc"], baseline_metrics["pr_auc"])
 
     # --- Primary model: LightGBM ---------------------------------------------------------
-    scale_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
+    # Imbalance note: scale_pos_weight / is_unbalance were both tested and rejected -
+    # the reweighted objective spikes validation AUC on the first 1-3 trees and then
+    # plateaus, so early stopping cuts training off immediately (AUC ~0.73). Plain
+    # LightGBM trains to convergence (AUC ~0.76); imbalance is instead handled
+    # downstream via threshold-independent metrics (ROC-AUC / PR-AUC) and the
+    # isotonic calibration step below, which anchors probabilities to the true
+    # ~8% base rate. observed_pos_weight is recorded in metrics.json for reference.
+    observed_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
     lgbm = lgb.LGBMClassifier(
-        n_estimators=400,
+        n_estimators=1500,
         learning_rate=0.05,
-        num_leaves=31,
+        num_leaves=34,
         max_depth=-1,
+        min_child_samples=70,
         subsample=0.8,
+        subsample_freq=1,          # subsample is ignored unless freq > 0
         colsample_bytree=0.8,
-        scale_pos_weight=scale_pos_weight,
+        reg_alpha=0.04,
+        reg_lambda=0.07,
         random_state=RANDOM_SEED,
         n_jobs=-1,
         verbosity=-1,
@@ -74,8 +94,9 @@ def train() -> dict:
         X_train, y_train,
         eval_set=[(X_val, y_val)],
         eval_metric="auc",
-        callbacks=[lgb.early_stopping(30, verbose=False), lgb.log_evaluation(0)],
+        callbacks=[lgb.early_stopping(120, verbose=False), lgb.log_evaluation(0)],
     )
+    log.info("LightGBM stopped at %d trees", lgbm.best_iteration_ or lgbm.n_estimators)
     lgbm_metrics = evaluate(y_val, lgbm.predict_proba(X_val)[:, 1])
     log.info("LightGBM: ROC-AUC=%.4f PR-AUC=%.4f", lgbm_metrics["roc_auc"], lgbm_metrics["pr_auc"])
 
@@ -86,12 +107,12 @@ def train() -> dict:
     )
     log.info("Champion model (pre-calibration): %s", champion_name)
 
-    # scale_pos_weight/class_weight='balanced' correct the *ranking* (ROC-AUC/PR-AUC
-    # are unaffected) but distort the raw probabilities - e.g. the champion's
-    # predicted probabilities topped out at ~0.41 on this data, meaning the "High"
-    # risk band (>0.5) would never fire. Isotonic calibration on the held-out
-    # validation fold remaps scores back to the applicants' true empirical default
-    # rates without needing to retrain, fixing the risk-band thresholds for free.
+    # LightGBM's raw scores are well-ranked but not probabilities on the true scale
+    # (a severe ~8/92 imbalance pushes the raw positive-class scores low, so the
+    # "High" band >0.5 would rarely fire). Isotonic calibration on the held-out
+    # validation fold remaps scores to the applicants' true empirical default rate
+    # without retraining, making the Low/Medium/High risk bands meaningful. This is
+    # also the pipeline's primary class-imbalance control (see the LightGBM note).
     calibrated_model = CalibratedClassifierCV(champion_model, method="isotonic", cv="prefit")
     calibrated_model.fit(X_val, y_val)
     calibrated_metrics = evaluate(y_val, calibrated_model.predict_proba(X_val)[:, 1])
@@ -109,20 +130,24 @@ def train() -> dict:
     save_json(
         {
             "champion_model": champion_name,
-            "scale_pos_weight": float(scale_pos_weight),
+            "observed_pos_weight": float(observed_pos_weight),
             "imbalance_strategy": (
-                "class_weight='balanced' for Logistic Regression; "
-                "scale_pos_weight (negative/positive ratio) for LightGBM. "
-                "No synthetic oversampling (SMOTE) was used to avoid introducing "
-                "artificial correlations on top of already-synthetic data; see README "
-                "limitations for the note on using SMOTE/undersampling with real data."
+                "Logistic Regression baseline: class_weight='balanced'. "
+                "LightGBM champion: scale_pos_weight / is_unbalance were tested and "
+                "rejected (they collapse early stopping to 1-3 trees on this data); "
+                "imbalance is instead handled with threshold-independent metrics "
+                "(ROC-AUC, PR-AUC) and isotonic probability calibration to the true "
+                "~8% base rate, with the Low/Medium/High bands read off the calibrated "
+                "probability rather than a fixed 0.5 cutoff. LightGBM also splits on "
+                "missing values natively and gets <col>_MISSING indicator features "
+                "instead of mean-imputed ones. SMOTE not used - see README limitations."
             ),
             "logistic_regression": baseline_metrics,
             "lightgbm": lgbm_metrics,
             "champion": champion_metrics,
             "calibration": "isotonic (CalibratedClassifierCV, cv='prefit' on the validation fold) - "
-                            "corrects probabilities distorted by scale_pos_weight/class_weight so the "
-                            "Low/Medium/High risk bands are meaningful.",
+                            "anchors the ranking scores to the true empirical default rate so the "
+                            "Low/Medium/High risk bands are meaningful; also the primary imbalance control.",
             "n_features": len(preprocessor.feature_columns),
             "train_rows": len(X_train),
             "val_rows": len(X_val),

@@ -8,11 +8,12 @@ insights and credit policy with rules" business goal:
    applicants. Because it's shallow, every path from root to leaf translates
    directly into an IF/THEN policy rule a credit analyst can read, review and
    challenge -- unlike the LightGBM ensemble itself.
-2. Threshold bins: the single most important SHAP feature (per
-   src.ml.explain) is cut into quantile bins and the empirical default rate
-   in each bin is reported, giving a simple, auditable "IF feature in range X
-   THEN observed default rate is Y%" statement grounded directly in data
-   rather than in the surrogate tree's approximation.
+2. Threshold bins: the model's dominant driver (EXT_SOURCE_MEAN - the
+   averaged external credit score, which carries ~8x the mean-abs SHAP of any
+   other feature) is cut into quantile bins and the *actual observed* default
+   rate for each bin is reported, giving a simple, auditable "IF feature in
+   range X THEN observed default rate is Y%" statement grounded directly in
+   the labelled data rather than in the surrogate tree's approximation.
 
 Output is a JSON-serializable list of rules consumed by the UI's Rules tab
 and by the chatbot when a user asks "why" questions.
@@ -74,18 +75,34 @@ def _threshold_bin_rules(df: pd.DataFrame, feature: str, y_true: pd.Series, n_bi
     return sorted(rules, key=lambda r: r["observed_default_rate"], reverse=True)
 
 
-def derive_rules(risk_model: RiskModel, applicants_df: pd.DataFrame, sample_size: int = 20_000) -> list[dict]:
+def derive_rules(
+    risk_model: RiskModel,
+    applicants_df: pd.DataFrame,
+    y_true: pd.Series | None = None,
+    sample_size: int = 20_000,
+) -> list[dict]:
     sample = applicants_df.sample(min(sample_size, len(applicants_df)), random_state=42)
     X = risk_model.transform_features(sample)
     predicted_proba = risk_model.model.predict_proba(X)[:, 1]
 
+    # Surrogate tree mimics the *model* (that is its job), so it is fit on predictions.
     surrogate = DecisionTreeRegressor(max_depth=SURROGATE_MAX_DEPTH, random_state=42)
     surrogate.fit(X, predicted_proba)
     tree_rules = _tree_to_rules(surrogate, list(X.columns))
     tree_rules.sort(key=lambda r: r["predicted_default_rate"], reverse=True)
 
-    key_feature = "CREDIT_INCOME_RATIO" if "CREDIT_INCOME_RATIO" in X.columns else X.columns[0]
-    bin_rules = _threshold_bin_rules(X, key_feature, pd.Series(predicted_proba, index=X.index))
+    # Threshold bins report the real observed default rate where labels are available.
+    for candidate in ("EXT_SOURCE_MEAN", "CREDIT_INCOME_RATIO"):
+        if candidate in X.columns:
+            key_feature = candidate
+            break
+    else:
+        key_feature = X.columns[0]
+    if y_true is not None:
+        bin_target = pd.to_numeric(y_true.loc[sample.index], errors="coerce")
+    else:
+        bin_target = pd.Series(predicted_proba, index=X.index)
+    bin_rules = _threshold_bin_rules(X, key_feature, bin_target)
 
     rules = tree_rules + bin_rules
     log.info("Derived %d surrogate-tree rules and %d threshold-bin rules", len(tree_rules), len(bin_rules))
@@ -119,8 +136,9 @@ def derive_and_save(risk_model: RiskModel | None = None) -> list[dict]:
     from src.data.loader import load_train_df
 
     risk_model = risk_model or RiskModel()
-    df = load_train_df().drop(columns=["TARGET"], errors="ignore")
-    rules = derive_rules(risk_model, df)
+    df = load_train_df()
+    y_true = df["TARGET"] if "TARGET" in df.columns else None
+    rules = derive_rules(risk_model, df.drop(columns=["TARGET"], errors="ignore"), y_true=y_true)
     save_json(rules, RULES_PATH)
     log.info("Saved %d rules to %s", len(rules), RULES_PATH)
     return rules

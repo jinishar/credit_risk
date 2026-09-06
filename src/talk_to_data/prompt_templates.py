@@ -17,7 +17,7 @@ PROMPT_VERSION = "v1"
 # and sql/HomeCredit_columns_description.csv, but only the columns the
 # chatbot actually needs are sent on every call).
 SCHEMA_CONTEXT = f"""
-Table: {APPLICATIONS_TABLE} (one row per loan applicant, ~50000 rows)
+Table: {APPLICATIONS_TABLE} (one row per loan applicant, ~307K rows on the real dataset)
 Key columns:
   SK_ID_CURR                INTEGER  - applicant id
   TARGET                    INTEGER  - 1 = defaulted, 0 = repaid

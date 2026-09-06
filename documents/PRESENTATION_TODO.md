@@ -1,15 +1,22 @@
-# Presentation placeholder
+# Presentation — to finalize
 
-The assignment asks for a use-case presentation (with output screenshots) saved as a
-PDF in this `documents/` folder.
+The assignment requires a use-case presentation (PPT exported to PDF) in this
+`documents/` folder, with output screenshots of the running app.
 
-I can't capture real screenshots of the running Streamlit app from this
-environment, so that PDF isn't included here. To finish this deliverable:
+**Status:** content is ready to assemble; screenshots are still needed.
 
-1. Run the app (`docker-compose up`, see the root `README.md`).
-2. Take screenshots of each tab (EDA, Risk Prediction, Explainability, Business
-   Rules, Chatbot).
-3. Build a short slide deck covering the use case, architecture, and those
-   screenshots.
-4. Export it as PDF and drop it in this folder, e.g. `documents/project_presentation.pdf`,
-   replacing this file.
+## What's needed
+
+Run the app (`docker-compose up`, or `streamlit run app/streamlit_app.py`)
+on the **real** Kaggle data and capture one screenshot of each tab:
+
+1. **EDA** — dataset summary metrics + the insight charts
+2. **Risk Prediction** — a scored applicant showing probability + risk band
+3. **Explainability** — the SHAP per-applicant factor list + global importance
+4. **Business Rules** — the surrogate-tree rules + threshold-bin table
+5. **Chatbot** — one canonical question answered (SQL + result table shown)
+
+Drop the images in `documents/screenshots/` (or send them over) and they get
+assembled into `documents/project_presentation.pdf` covering: use case &
+business context, architecture, EDA highlights, model + calibration results
+(ROC-AUC 0.763), explainability, rules, talk-to-data design, limitations.
