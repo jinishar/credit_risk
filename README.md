@@ -5,15 +5,28 @@ dataset: EDA → an imbalance-aware ML default-risk model → SHAP explainabilit
 → business rule derivation → a Gemini-powered talk-to-data chatbot → one
 multi-tab Streamlit UI → Docker Compose deployment.
 
-> **Data.** All numbers below are from the **real Kaggle Home Credit
-> `application_train.csv`** — 307,511 applicants, 122 columns, 8.07% default
-> rate (≈11.4:1 imbalance). The CSVs are not committed to git (per the
-> assignment's code structure) and are mounted into the container at runtime.
-> If `data/application_train.csv` is absent, `src/data/loader.py`
-> automatically falls back to a **schema-accurate synthetic generator**
-> (`src/data/synthetic.py`) so `docker-compose up` still produces a fully
-> working demo with zero setup — see
-> [Getting the real dataset](#getting-the-real-dataset-and-the-synthetic-fallback).
+## Quick start
+
+```bash
+git clone https://github.com/jinishar/credit_risk.git
+cd credit_risk
+cp .env.example .env          # then paste your GEMINI_API_KEY into .env (optional)
+docker compose up             # first run trains the model, ~1–2 min
+```
+
+Open **http://localhost:8501**. That's the whole setup.
+
+- **No dataset download needed to try it** — if `data/application_train.csv`
+  is missing, the app generates a schema-accurate synthetic dataset and runs
+  end to end. To reproduce the numbers in this README, drop the real Kaggle
+  CSVs into `data/` first ([2 steps below](#1-optional-use-the-real-kaggle-dataset)).
+- **No Gemini key needed to try it** — the 5 required talk-to-data questions
+  work without one; a key only unlocks free-form questions.
+
+> **All metrics below are on the real Kaggle `application_train.csv`** —
+> 307,511 applicants, 122 columns, 8.07% default rate (≈11.4:1 imbalance).
+> The CSVs are gitignored (per the assignment's code structure) and mounted
+> into the container at runtime.
 
 ## Architecture
 
@@ -73,46 +86,68 @@ multi-tab Streamlit UI → Docker Compose deployment.
 
 ## Setup & Run
 
-### Option A — Docker (recommended, one command)
+**Prerequisites:** Docker + Docker Compose (that's it), *or* Python 3.11+ for
+the local route.
+
+### 1. (Optional) Use the real Kaggle dataset
+
+Skip this and the app runs on synthetic data. To reproduce this README's
+numbers:
+
+1. Download from the
+   [Kaggle competition](https://www.kaggle.com/competitions/home-credit-default-risk/data)
+   → *Data* tab → accept rules → *Download All* → unzip.
+2. Copy `application_train.csv` and `application_test.csv` into `data/`.
+
+(Already ran once on synthetic data? Also `rm -f models/* data/credit_risk.duckdb`
+so it retrains on the real files.)
+
+### 2. Configure
 
 ```bash
-cp .env.example .env        # optionally add GEMINI_API_KEY for the chatbot
-docker-compose up
+cp .env.example .env
 ```
 
-Open **http://localhost:8501**. To run on the real Kaggle data, drop
-`application_train.csv` / `application_test.csv` into `data/` **before**
-`docker-compose up` (see [below](#getting-the-real-dataset-and-the-synthetic-fallback));
-otherwise the container generates a synthetic dataset so the demo still
-works with no download. On first start it trains the model and derives
-business rules (~1-2 min on the real data); subsequent restarts reuse the
-artifacts in the mounted `models/` volume and start instantly.
+Everything has a working default. The only value worth setting is
+`GEMINI_API_KEY` (from https://aistudio.google.com/apikey) for free-form
+chatbot questions — the 5 canonical questions work without it.
 
-### Option B — Local Python
+### 3. Run
+
+**Docker (recommended):**
 
 ```bash
-python -m venv .venv && source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+docker compose up          # or: docker-compose up   (older Compose v1)
+```
+
+**Local Python:**
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env        # optionally add GEMINI_API_KEY
-python -m src.ml.train
-python -m src.rules.rule_engine
+python -m src.ml.train              # trains + saves model artifacts
+python -m src.rules.rule_engine     # derives business rules
 streamlit run app/streamlit_app.py
 ```
 
-### Getting the real dataset (and the synthetic fallback)
+Then open **http://localhost:8501**.
 
-The real CSVs aren't in the repo. To run the platform exactly as documented:
+**First-run behaviour:** on the first start the app trains the model and
+derives rules (~1–2 min on the real data; the UI shows a progress spinner).
+Artifacts are saved to `models/` (a mounted volume under Docker), so every
+later start is instant. To force a full retrain, delete `models/*`.
 
-1. Download `application_train.csv` / `application_test.csv` from the
-   [Kaggle competition](https://www.kaggle.com/competitions/home-credit-default-risk/data)
-   (accept the rules, then *Download All*).
-2. Put both files in `data/`.
-3. `rm -f models/* data/credit_risk.duckdb` so the pipeline retrains on them.
+## Using the app
 
-If you skip this, `src/data/loader.py` calls `src/data/synthetic.py` to
-generate a schema-accurate stand-in (122 columns, same imbalance and the
-`DAYS_EMPLOYED == 365243` quirk) so the app still runs end to end — the
-model/EDA numbers will differ from those below.
+Five tabs, left to right — the intended demo flow:
+
+| Tab | What it does |
+|---|---|
+| **📊 EDA** | Dataset summary, missing-value chart, and the key business-insight charts (default rate by education, age, family status, external score). |
+| **🎯 Risk Prediction** | Pick a sample applicant (or enter values) → get a default probability and a Low / Medium / High risk band. |
+| **🔍 Explainability** | SHAP breakdown for the applicant just scored — which features pushed risk up or down — plus global feature importance. |
+| **📋 Business Rules** | The IF/THEN policy rules derived from the model, the observed-default-rate bands, and which rules the current applicant triggers. |
+| **💬 Chatbot** | Ask about the data in plain English. Five one-click sample questions always work; free-form questions need a Gemini key. Every answer shows the SQL it ran and the result table. |
 
 ## Model Selection & Class Imbalance Strategy
 
@@ -333,6 +368,17 @@ Full analysis in `notebooks/eda.py` / `notebooks/eda.ipynb`, figures in
   model.** They're intentionally shallow (depth ≤3) for human readability;
   treat them as policy guidance, not a drop-in replacement for the model's
   own score.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `docker compose` not found | Use `docker-compose` (Compose v1) — same command. |
+| Port 8501 already in use | `APP_PORT=8502 docker compose up`, then open that port. |
+| First load is slow / shows a spinner | Expected — it's the one-time model training. Next start is instant. |
+| Chatbot: "GEMINI_API_KEY is not set" | Expected without a key. The 5 sample questions still work. Add the key to `.env` for free-form questions. |
+| Changed the data and numbers look stale | `rm -f models/* data/credit_risk.duckdb` and restart to force a retrain. |
+| Local run: `ModuleNotFoundError: src` | Run from the repo root (`python -m src.ml.train`, not `python src/ml/train.py`). |
 
 ## Project Structure
 
