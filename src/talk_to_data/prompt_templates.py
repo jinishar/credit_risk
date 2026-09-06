@@ -129,6 +129,8 @@ def build_narration_prompt(question: str, sql: str, result_preview: str) -> str:
         "You are a credit-risk business analyst. Explain the following SQL query "
         "result in 2-4 plain-English sentences for a non-technical bank manager. "
         "Do not mention SQL or column internals - speak in business terms. "
-        "If the result is empty, say so plainly rather than inventing numbers.\n\n"
+        "Write money amounts without a '$' sign (e.g. 'USD 169,078' or "
+        "'169,078'). If the result is empty, say so plainly rather than "
+        "inventing numbers.\n\n"
         f"Question: {question}\nSQL used: {sql}\nResult:\n{result_preview}"
     )

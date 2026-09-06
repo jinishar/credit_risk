@@ -233,14 +233,19 @@ with tab_chat:
             turn = st.session_state.chat_session.ask(question)
         st.session_state.chat_log.append(turn)
 
+    def _md_safe(text: str) -> str:
+        # `$` pairs are read as LaTeX math by Streamlit's markdown; dollar amounts
+        # in the narration ("$169,078 ... $165,612") would render as italic math.
+        return (text or "").replace("$", r"\$")
+
     for turn in reversed(st.session_state.chat_log):
         with st.chat_message("user"):
             st.write(turn.question)
         with st.chat_message("assistant"):
             if turn.error:
-                st.error(turn.narrative)
+                st.error(_md_safe(turn.narrative))
             else:
-                st.write(turn.narrative)
+                st.write(_md_safe(turn.narrative))
                 with st.expander("SQL used"):
                     st.code(turn.sql, language="sql")
                 if not turn.result.empty:
