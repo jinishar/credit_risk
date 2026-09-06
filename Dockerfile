@@ -14,6 +14,7 @@ COPY src/ src/
 COPY app/ app/
 COPY sql/ sql/
 COPY notebooks/ notebooks/
+COPY .streamlit/ .streamlit/
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 

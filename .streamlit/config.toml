@@ -1,0 +1,14 @@
+# Streamlit theme — dark analytical. Colours mirror app/theme.py
+# (BG / SURFACE / INK / MUTED / PRIMARY); the Inter stack and the rest of the
+# styling are applied by app/styles.py, since config `font` only accepts the
+# three generic families.
+[theme]
+base = "dark"
+primaryColor = "#3987e5"
+backgroundColor = "#0b1220"
+secondaryBackgroundColor = "#161d2b"
+textColor = "#e8edf6"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
