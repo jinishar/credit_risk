@@ -1,0 +1,117 @@
+[
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN <= 0.395",
+      "EXT_SOURCE_MEAN <= 0.25",
+      "EXT_SOURCE_3 <= 0.226"
+    ],
+    "predicted_default_rate": 0.3414,
+    "n_samples": 384
+  },
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN <= 0.395",
+      "EXT_SOURCE_MEAN <= 0.25",
+      "EXT_SOURCE_3 > 0.226"
+    ],
+    "predicted_default_rate": 0.2332,
+    "n_samples": 832
+  },
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN <= 0.395",
+      "EXT_SOURCE_MEAN > 0.25",
+      "GOODS_PRICE_CREDIT_RATIO <= 0.826"
+    ],
+    "predicted_default_rate": 0.2061,
+    "n_samples": 793
+  },
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN <= 0.395",
+      "EXT_SOURCE_MEAN > 0.25",
+      "GOODS_PRICE_CREDIT_RATIO > 0.826"
+    ],
+    "predicted_default_rate": 0.1406,
+    "n_samples": 2383
+  },
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN > 0.395",
+      "EXT_SOURCE_MEAN <= 0.523",
+      "GOODS_PRICE_CREDIT_RATIO <= 0.863"
+    ],
+    "predicted_default_rate": 0.1022,
+    "n_samples": 2105
+  },
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN > 0.395",
+      "EXT_SOURCE_MEAN <= 0.523",
+      "GOODS_PRICE_CREDIT_RATIO > 0.863"
+    ],
+    "predicted_default_rate": 0.0713,
+    "n_samples": 3509
+  },
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN > 0.395",
+      "EXT_SOURCE_MEAN > 0.523",
+      "EXT_SOURCE_MEAN <= 0.643"
+    ],
+    "predicted_default_rate": 0.0432,
+    "n_samples": 6003
+  },
+  {
+    "type": "surrogate_tree",
+    "conditions": [
+      "EXT_SOURCE_MEAN > 0.395",
+      "EXT_SOURCE_MEAN > 0.523",
+      "EXT_SOURCE_MEAN > 0.643"
+    ],
+    "predicted_default_rate": 0.0238,
+    "n_samples": 3991
+  },
+  {
+    "type": "threshold_bin",
+    "feature": "EXT_SOURCE_MEAN",
+    "range": "(-0.000749, 0.383]",
+    "observed_default_rate": 0.1991,
+    "n_samples": 3998
+  },
+  {
+    "type": "threshold_bin",
+    "feature": "EXT_SOURCE_MEAN",
+    "range": "(0.383, 0.483]",
+    "observed_default_rate": 0.0913,
+    "n_samples": 3998
+  },
+  {
+    "type": "threshold_bin",
+    "feature": "EXT_SOURCE_MEAN",
+    "range": "(0.483, 0.562]",
+    "observed_default_rate": 0.0548,
+    "n_samples": 3997
+  },
+  {
+    "type": "threshold_bin",
+    "feature": "EXT_SOURCE_MEAN",
+    "range": "(0.562, 0.642]",
+    "observed_default_rate": 0.041,
+    "n_samples": 3998
+  },
+  {
+    "type": "threshold_bin",
+    "feature": "EXT_SOURCE_MEAN",
+    "range": "(0.642, 0.855]",
+    "observed_default_rate": 0.0255,
+    "n_samples": 3998
+  }
+]

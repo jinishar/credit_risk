@@ -1,0 +1,57 @@
+{
+  "champion_model": "lightgbm",
+  "observed_pos_weight": 11.38710976837865,
+  "imbalance_strategy": "Logistic Regression baseline: class_weight='balanced'. LightGBM champion: scale_pos_weight / is_unbalance were tested and rejected (they collapse early stopping to 1-3 trees on this data); imbalance is instead handled with threshold-independent metrics (ROC-AUC, PR-AUC) and isotonic probability calibration to the true ~8% base rate, with the Low/Medium/High bands read off the calibrated probability rather than a fixed 0.5 cutoff. LightGBM also splits on missing values natively and gets <col>_MISSING indicator features instead of mean-imputed ones. SMOTE not used - see README limitations.",
+  "logistic_regression": {
+    "roc_auc": 0.7497706628489347,
+    "pr_auc": 0.23544548082333233,
+    "f1": 0.2598730060399566,
+    "precision": 0.16085893687389158,
+    "recall": 0.6759315206445116,
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "true_negative": 39031,
+      "false_positive": 17507,
+      "false_negative": 1609,
+      "true_positive": 3356
+    },
+    "positive_rate": 0.08072776937710356,
+    "n_samples": 61503
+  },
+  "lightgbm": {
+    "roc_auc": 0.7619404778228098,
+    "pr_auc": 0.25384755643912926,
+    "f1": 0.04649360712901976,
+    "precision": 0.6091370558375635,
+    "recall": 0.02416918429003021,
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "true_negative": 56461,
+      "false_positive": 77,
+      "false_negative": 4845,
+      "true_positive": 120
+    },
+    "positive_rate": 0.08072776937710356,
+    "n_samples": 61503
+  },
+  "champion": {
+    "roc_auc": 0.7633153589862491,
+    "pr_auc": 0.24569549180324277,
+    "f1": 0.058958652373660034,
+    "precision": 0.5945945945945946,
+    "recall": 0.031017119838872106,
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "true_negative": 56433,
+      "false_positive": 105,
+      "false_negative": 4811,
+      "true_positive": 154
+    },
+    "positive_rate": 0.08072776937710356,
+    "n_samples": 61503
+  },
+  "calibration": "isotonic (CalibratedClassifierCV, cv='prefit' on the validation fold) - anchors the ranking scores to the true empirical default rate so the Low/Medium/High risk bands are meaningful; also the primary imbalance control.",
+  "n_features": 236,
+  "train_rows": 246008,
+  "val_rows": 61503
+}

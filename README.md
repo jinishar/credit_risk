@@ -10,6 +10,17 @@ The project demonstrates the complete AI engineering lifecycle:
 
 ---
 
+## Live Demo
+
+A hosted instance runs on **Streamlit Community Cloud**: _<add your app URL here>_
+
+The hosted app uses the committed champion model and falls back to a
+schema-accurate **synthetic dataset** (the Home Credit files are too large and
+are not redistributed), so exploratory statistics differ from a local run on
+the real Kaggle data. All five sections are fully functional.
+
+---
+
 ## Overview
 
 Financial institutions need credit decisions that are not only accurate, but also **explainable, auditable, and accessible to business users**.
@@ -457,6 +468,30 @@ Open:
 ```text
 http://localhost:8501
 ```
+
+---
+
+## Deploy to Streamlit Community Cloud
+
+The repository is deploy-ready — the trained champion model and its derived
+JSON are committed, so no training run is needed on the host.
+
+1. Push the repository to GitHub (public, or private with Streamlit granted access).
+2. At [share.streamlit.io](https://share.streamlit.io), create a **New app** with:
+   - **Main file path:** `app/streamlit_app.py`
+   - **Python version:** 3.11 (Advanced settings) — the pinned `numpy` /
+     `scikit-learn` versions predate Python 3.13. A `.python-version` file is
+     included for the same reason.
+3. In **Advanced settings → Secrets**, add the Gemini key to enable free-form
+   Talk-to-Data (the pre-verified sample questions work without it):
+
+   ```toml
+   GEMINI_API_KEY = "your_api_key"
+   ```
+
+`Dockerfile`, `docker-compose.yml`, and `entrypoint.sh` are not used by
+Streamlit Cloud. The host filesystem is ephemeral, so the synthetic dataset and
+DuckDB file are regenerated on each cold start.
 
 ---
 
