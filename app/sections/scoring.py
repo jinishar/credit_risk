@@ -10,7 +10,6 @@ from src.utils.config import RISK_HIGH_THRESHOLD, RISK_LOW_THRESHOLD
 
 def render() -> None:
     df = data.dataset()
-    model = data.risk_model()
     ui.section_header(
         "Risk Scoring",
         "Calibrated default probability and a Low / Medium / High risk band per applicant.",
@@ -25,7 +24,7 @@ def render() -> None:
     else:
         applicant = _manual_form(df, features)
 
-    scored = model.score(applicant)
+    scored = data.score_applicant(applicant)
     proba = float(scored["default_probability"].iloc[0])
     band = scored["risk_band"].iloc[0]
 

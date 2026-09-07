@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app import ui
+from app import data, ui
 from src.talk_to_data.prompt_templates import CANONICAL_PATTERNS
 from src.talk_to_data.query_runner import ChatSession
 from src.utils.config import GEMINI_API_KEY
@@ -28,10 +28,11 @@ def render() -> None:
             "end to end; free-form questions need a key."
         )
 
-    # Guard, not setdefault: ChatSession() opens a DuckDB connection, so it must
-    # be built once per session, not re-evaluated on every rerun.
+    # Guard, not setdefault: ChatSession holds conversation history, so it must
+    # be built once per session. It reuses the app's cached DuckDB connection
+    # rather than re-loading the CSV into a new one.
     if "chat_session" not in st.session_state:
-        st.session_state.chat_session = ChatSession()
+        st.session_state.chat_session = ChatSession(connection=data.duckdb_connection())
     st.session_state.setdefault("chat_log", [])
 
     with ui.panel("Sample questions", "One click — pre-verified SQL, no LLM call."):

@@ -43,8 +43,7 @@ def render() -> None:
 
     if "current_applicant" in st.session_state:
         with ui.panel("Rules triggered by the current applicant"):
-            model = data.risk_model()
-            row = model.transform_features(st.session_state["current_applicant"]).iloc[0]
+            row = data.transformed_features(st.session_state["current_applicant"]).iloc[0]
             hits = rules_for_applicant(rules, row)
             if hits:
                 for r in hits:

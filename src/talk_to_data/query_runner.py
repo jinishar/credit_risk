@@ -35,12 +35,18 @@ class ChatTurn:
 
 @dataclass
 class ChatSession:
-    """One conversation's state: engine, DB connection and rolling history."""
+    """One conversation's state: engine, DB connection and rolling history.
+
+    `connection` lets the caller pass a shared, already-loaded DuckDB
+    connection (the Streamlit app caches one per server); when omitted a fresh
+    one is opened, which is what the CLI and tests want.
+    """
     engine: NLToSQLEngine = field(default_factory=NLToSQLEngine)
     history: list[dict] = field(default_factory=list)
+    connection: object | None = None
 
     def __post_init__(self) -> None:
-        self._con = get_duckdb_connection()
+        self._con = self.connection if self.connection is not None else get_duckdb_connection()
 
     def ask(self, question: str) -> ChatTurn:
         try:
@@ -69,7 +75,9 @@ class ChatSession:
     def _run(self, sql: str) -> pd.DataFrame:
         if "limit" not in sql.lower():
             sql = f"{sql} LIMIT {MAX_ROWS_RETURNED}"
-        return self._con.execute(sql).fetchdf()
+        # A per-call cursor keeps queries thread-safe when the connection is
+        # shared across Streamlit sessions.
+        return self._con.cursor().execute(sql).fetchdf()
 
     def _narrate(self, question: str, sql: str, df: pd.DataFrame) -> str:
         if df.empty:

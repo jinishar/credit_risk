@@ -12,7 +12,8 @@ The project demonstrates the complete AI engineering lifecycle:
 
 ## Live Demo
 
-A hosted instance runs on **Streamlit Community Cloud**: _<add your app URL here>_
+A hosted instance runs on **Streamlit Community Cloud**:
+**https://ai-credit-risk-intelligence-platform.streamlit.app/**
 
 The hosted app uses the committed champion model and falls back to a
 schema-accurate **synthetic dataset** (the Home Credit files are too large and
