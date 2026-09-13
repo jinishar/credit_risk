@@ -604,5 +604,3 @@ AI / Machine Learning | Data Science | Generative AI
 ## Acknowledgements
 
 Dataset: **Home Credit Default Risk**
-
-Developed as part of the **NeoStats AI Engineer Use Case Assignment**.
